@@ -1,0 +1,62 @@
+<!-- Deck Stats Sidebar -->
+<div class="md:col-span-1">
+  <div class="bg-white rounded-lg shadow-md p-6">
+      <h2 class="text-xl font-bold mb-4">Deck Stats</h2>
+      
+      <!-- Card Counts -->
+      <div class="mb-6">
+          <h3 class="font-medium text-gray-700 mb-2">Card Counts</h3>
+          <div class="grid grid-cols-2 gap-3">
+              <div class="bg-gray-50 rounded p-3 text-center">
+                  <p class="text-sm text-gray-500">Mainboard</p>
+                  <p class="text-2xl font-bold text-gray-800">{{ deck_stats.mainboard_count }}</p>
+              </div>
+              <div class="bg-gray-50 rounded p-3 text-center">
+                  <p class="text-sm text-gray-500">Sideboard</p>
+                  <p class="text-2xl font-bold text-gray-800">{{ deck_stats.sideboard_count }}</p>
+              </div>
+          </div>
+      </div>
+      
+      <!-- Card Types -->
+      <div class="mb-6">
+          <h3 class="font-medium text-gray-700 mb-2">Card Types</h3>
+          <div class="space-y-2">
+              {% for type, count in deck_stats.type_counts.items %}
+              <div class="bg-gray-50 rounded p-2">
+                  <div class="flex justify-between items-center">
+                      <span class="text-gray-700">{{ type }}</span>
+                      <span class="font-medium">{{ count }}</span>
+                  </div>
+                  <div class="w-full bg-gray-200 rounded-full h-2 mt-1">
+                    <div class="bg-blue-600 h-2 rounded-full" style="width: {% if deck_stats.mainboard_count %}{{ count|floatformat:0 }}{% else %}0{% endif %}%"></div>
+                  </div>
+              </div>
+              {% empty %}
+              <p class="text-sm text-gray-500 italic">No cards in deck</p>
+              {% endfor %}
+          </div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="space-y-2">
+          <button id="import-btn" class="w-full py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">
+              <i class="fas fa-file-import mr-1"></i> Import Cards
+          </button>
+          <button id="export-btn" class="w-full py-2 px-4 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300 transition-colors duration-200">
+              <i class="fas fa-file-export mr-1"></i> Export Deck
+          </button>
+          <div id="export-options" class="hidden mt-2 p-2 bg-gray-100 rounded-md">
+              <p class="text-sm text-gray-700 mb-2">Export as:</p>
+              <div class="flex gap-2">
+                  <a href="{% url 'export_decklist' collection.id decklist.id %}?format=txt" class="flex-1 py-1 px-3 bg-white text-center text-sm text-gray-700 rounded border border-gray-300 hover:bg-gray-50">
+                      Text (.txt)
+                  </a>
+                  <a href="{% url 'export_decklist' collection.id decklist.id %}?format=csv" class="flex-1 py-1 px-3 bg-white text-center text-sm text-gray-700 rounded border border-gray-300 hover:bg-gray-50">
+                      CSV (.csv)
+                  </a>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>

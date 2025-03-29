@@ -1,0 +1,238 @@
+// Tab navigation
+document.addEventListener('DOMContentLoaded', function() {
+    const mainboardTabBtn = document.getElementById('mainboard-tab-btn');
+    const sideboardTabBtn = document.getElementById('sideboard-tab-btn');
+    const mainboardTab = document.getElementById('mainboard-tab');
+    const sideboardTab = document.getElementById('sideboard-tab');
+    
+    mainboardTabBtn.addEventListener('click', function() {
+        mainboardTabBtn.classList.add('border-blue-500', 'text-blue-600', 'font-medium');
+        mainboardTabBtn.classList.remove('border-transparent', 'text-gray-500');
+        sideboardTabBtn.classList.remove('border-blue-500', 'text-blue-600', 'font-medium');
+        sideboardTabBtn.classList.add('border-transparent', 'text-gray-500');
+        
+        mainboardTab.classList.remove('hidden');
+        sideboardTab.classList.add('hidden');
+    });
+    
+    sideboardTabBtn.addEventListener('click', function() {
+        sideboardTabBtn.classList.add('border-blue-500', 'text-blue-600', 'font-medium');
+        sideboardTabBtn.classList.remove('border-transparent', 'text-gray-500');
+        mainboardTabBtn.classList.remove('border-blue-500', 'text-blue-600', 'font-medium');
+        mainboardTabBtn.classList.add('border-transparent', 'text-gray-500');
+        
+        sideboardTab.classList.remove('hidden');
+        mainboardTab.classList.add('hidden');
+    });
+    
+    // Edit decklist button
+    document.getElementById('edit-decklist-btn').addEventListener('click', function() {
+        document.getElementById('edit-decklist-modal').classList.remove('hidden');
+    });
+    
+    // Delete decklist button
+    document.getElementById('delete-decklist-btn').addEventListener('click', function() {
+        document.getElementById('delete-confirmation-modal').classList.remove('hidden');
+    });
+    
+    // Toggle active button
+    document.getElementById('toggle-active-btn').addEventListener('click', function() {
+        // Send AJAX request to toggle active status
+        fetch('{% url "toggle_decklist_active" collection.id decklist.id %}', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-CSRFToken': '{{ csrf_token }}'
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Toggle button appearance
+                const button = document.getElementById('toggle-active-btn');
+                const statusBadge = document.getElementById('status-badge');
+                
+                if (data.active) {
+                    button.innerHTML = '<i class="fas fa-toggle-on mr-1"></i> Active';
+                    button.classList.remove('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+                    button.classList.add('bg-yellow-100', 'text-yellow-700', 'hover:bg-yellow-200');
+                    
+                    // Update status badge (will need to reload for accurate status)
+                    statusBadge.textContent = 'Active';
+                    statusBadge.classList.remove('bg-gray-100', 'text-gray-800');
+                    statusBadge.classList.add('bg-green-100', 'text-green-800');
+                } else {
+                    button.innerHTML = '<i class="fas fa-toggle-off mr-1"></i> Inactive';
+                    button.classList.remove('bg-yellow-100', 'text-yellow-700', 'hover:bg-yellow-200');
+                    button.classList.add('bg-blue-100', 'text-blue-700', 'hover:bg-blue-200');
+                    
+                    // Update status badge
+                    statusBadge.textContent = 'Inactive';
+                    statusBadge.classList.remove('bg-green-100', 'text-green-800', 'bg-yellow-100', 'text-yellow-800', 'bg-red-100', 'text-red-800');
+                    statusBadge.classList.add('bg-gray-100', 'text-gray-800');
+                    
+                    // Hide conflicts (if any)
+                    const conflictsDiv = document.getElementById('deck-conflicts');
+                    if (conflictsDiv) {
+                        conflictsDiv.classList.add('hidden');
+                    }
+                }
+                
+                // For full status update, reload the page
+                setTimeout(() => {
+                    window.location.reload();
+                }, 500);
+            }
+        })
+        .catch(error => console.error('Error:', error));
+    });
+    
+    // Import button
+    document.getElementById('import-btn').addEventListener('click', function() {
+        document.getElementById('import-decklist-modal').classList.remove('hidden');
+    });
+    
+    // Export button
+    const exportBtn = document.getElementById('export-btn');
+    const exportOptions = document.getElementById('export-options');
+    
+    exportBtn.addEventListener('click', function() {
+        exportOptions.classList.toggle('hidden');
+    });
+    
+    // Card search with suggestions
+    const cardSearch = document.getElementById('card-search');
+    const searchSuggestions = document.getElementById('search-suggestions');
+    
+    if (cardSearch && searchSuggestions) {
+        let searchTimeout;
+        
+        cardSearch.addEventListener('input', function() {
+            const query = this.value.trim();
+            
+            clearTimeout(searchTimeout);
+            
+            if (query.length < 2) {
+                searchSuggestions.classList.add('hidden');
+                return;
+            }
+            
+            searchTimeout = setTimeout(() => {
+                fetch(`{% url 'search_decklist_cards' collection.id decklist.id %}?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateSuggestions(data.results);
+                    })
+                    .catch(error => console.error('Error searching cards:', error));
+            }, 300);
+        });
+        
+        // Close suggestions when clicking outside
+        document.addEventListener('click', function(event) {
+            if (!cardSearch.contains(event.target) && !searchSuggestions.contains(event.target)) {
+                searchSuggestions.classList.add('hidden');
+            }
+        });
+        
+        // Update suggestions
+        function updateSuggestions(results) {
+            searchSuggestions.innerHTML = '';
+            
+            if (results.length === 0) {
+                searchSuggestions.classList.add('hidden');
+                return;
+            }
+            
+            results.forEach(card => {
+                const div = document.createElement('div');
+                div.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
+                
+                // Create card info
+                const nameSpan = document.createElement('span');
+                nameSpan.className = 'font-medium';
+                nameSpan.textContent = card.name;
+                
+                const setSpan = document.createElement('span');
+                setSpan.className = 'text-xs text-gray-500 ml-2';
+                setSpan.textContent = `${card.set_code.toUpperCase()} #${card.collector_number}`;
+                
+                div.appendChild(nameSpan);
+                div.appendChild(setSpan);
+                
+                // Add action buttons at the right
+                const actionsDiv = document.createElement('div');
+                actionsDiv.className = 'float-right';
+                
+                // Mainboard button
+                const mainboardBtn = document.createElement('button');
+                mainboardBtn.className = 'px-2 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 mr-1';
+                mainboardBtn.textContent = 'Main';
+                mainboardBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    updateDecklistCard(card.id, 'increase', false);
+                    searchSuggestions.classList.add('hidden');
+                });
+                
+                // Sideboard button
+                const sideboardBtn = document.createElement('button');
+                sideboardBtn.className = 'px-2 py-1 text-xs bg-gray-600 text-white rounded hover:bg-gray-700';
+                sideboardBtn.textContent = 'Side';
+                sideboardBtn.addEventListener('click', function(e) {
+                    e.stopPropagation();
+                    updateDecklistCard(card.id, 'increase', true);
+                    searchSuggestions.classList.add('hidden');
+                });
+                
+                actionsDiv.appendChild(mainboardBtn);
+                actionsDiv.appendChild(sideboardBtn);
+                div.appendChild(actionsDiv);
+                
+                // Add collection info
+                const infoDiv = document.createElement('div');
+                infoDiv.className = 'text-xs text-gray-600 mt-1';
+                
+                // Show current quantities
+                let infoText = '';
+                if (card.collection_quantity > 0 || card.collection_quantity === -1) {
+                    infoText += `Collection: ${card.collection_quantity === -1 ? '∞' : card.collection_quantity}`;
+                }
+                if (card.mainboard_quantity > 0) {
+                    infoText += (infoText ? ' • ' : '') + `Mainboard: ${card.mainboard_quantity}`;
+                }
+                if (card.sideboard_quantity > 0) {
+                    infoText += (infoText ? ' • ' : '') + `Sideboard: ${card.sideboard_quantity}`;
+                }
+                
+                infoDiv.textContent = infoText || 'Not in collection';
+                div.appendChild(infoDiv);
+                
+                // Add to suggestions
+                searchSuggestions.appendChild(div);
+            });
+            
+            searchSuggestions.classList.remove('hidden');
+        }
+    }
+});
+
+// Update decklist card quantity
+function updateDecklistCard(cardId, action, isSideboard) {
+    const formData = new FormData();
+    formData.append('card_id', cardId);
+    formData.append('action', action);
+    formData.append('is_sideboard', isSideboard);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('{% url "update_decklist_card" collection.id decklist.id %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Reload the page to reflect changes
+            window.location.reload();
+        }
+    })
+    .catch(error => console.error('Error updating card:', error));
+}

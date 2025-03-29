@@ -1,0 +1,153 @@
+<!-- Card Lists Section -->
+<div class="md:col-span-2">
+  <div class="bg-white rounded-lg shadow-md p-6">
+      <!-- Search Box -->
+      <div class="mb-6 relative">
+          <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                  <i class="fas fa-search"></i>
+              </span>
+              <input type="text" id="card-search" class="pl-10 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search for cards to add...">
+          </div>
+          <div id="search-suggestions" class="absolute z-10 mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto hidden"></div>
+      </div>
+      
+      <!-- Tabs Navigation -->
+      <div class="border-b border-gray-200 mb-4">
+          <ul class="flex flex-wrap -mb-px">
+              <li class="mr-2">
+                  <button type="button" id="mainboard-tab-btn" class="inline-block py-2 px-4 text-center border-b-2 border-blue-500 text-blue-600 font-medium">
+                      Mainboard ({{ deck_stats.mainboard_count }})
+                  </button>
+              </li>
+              <li class="mr-2">
+                  <button type="button" id="sideboard-tab-btn" class="inline-block py-2 px-4 text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300">
+                      Sideboard ({{ deck_stats.sideboard_count }})
+                  </button>
+              </li>
+          </ul>
+      </div>
+      
+      <!-- Mainboard Tab -->
+      <div id="mainboard-tab" class="tab-content">
+          {% if mainboard_cards.exists %}
+          <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                      <tr>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Name</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mana Cost</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collection</th>
+                      </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                      {% for deck_card in mainboard_cards %}
+                      <tr>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <a href="{{ deck_card.card.scryfall_uri }}" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-800">{{ deck_card.card.name }}</a>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="flex items-center">
+                                  <button class="text-gray-600 hover:text-red-600 focus:outline-none" onclick="updateDecklistCard('{{ deck_card.card.id }}', 'decrease', false)">
+                                      <i class="fas fa-minus-circle"></i>
+                                  </button>
+                                  <span class="mx-3 text-sm font-medium">{{ deck_card.quantity }}</span>
+                                  <button class="text-gray-600 hover:text-green-600 focus:outline-none" onclick="updateDecklistCard('{{ deck_card.card.id }}', 'increase', false)">
+                                      <i class="fas fa-plus-circle"></i>
+                                  </button>
+                              </div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="text-sm text-gray-500">{{ deck_card.card.mana_cost|default:"-" }}</div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="text-sm text-gray-500">{{ deck_card.card.type_line|default:"Unknown" }}</div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              {% with collection_quantity=deck_card.card.collectioncard_set.filter.first.quantity|default:0 %}
+                              <div class="text-sm {% if collection_quantity < deck_card.quantity and collection_quantity != -1 %}text-red-600{% elif collection_quantity == -1 %}text-green-600{% else %}text-gray-500{% endif %}">
+                                  {% if collection_quantity == -1 %}
+                                  ∞
+                                  {% else %}
+                                  {{ collection_quantity }}
+                                  {% endif %}
+                              </div>
+                              {% endwith %}
+                          </td>
+                      </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          </div>
+          {% else %}
+          <div class="text-center py-12 text-gray-500">
+              <p class="text-lg mb-2">No cards in mainboard yet.</p>
+              <p>Search for cards to add them to your deck!</p>
+          </div>
+          {% endif %}
+      </div>
+      
+      <!-- Sideboard Tab -->
+      <div id="sideboard-tab" class="tab-content hidden">
+          {% if sideboard_cards.exists %}
+          <div class="overflow-x-auto">
+              <table class="min-w-full divide-y divide-gray-200">
+                  <thead class="bg-gray-50">
+                      <tr>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Name</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mana Cost</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                          <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Collection</th>
+                      </tr>
+                  </thead>
+                  <tbody class="bg-white divide-y divide-gray-200">
+                      {% for deck_card in sideboard_cards %}
+                      <tr>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <a href="{{ deck_card.card.scryfall_uri }}" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-800">{{ deck_card.card.name }}</a>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="flex items-center">
+                                  <button class="text-gray-600 hover:text-red-600 focus:outline-none" onclick="updateDecklistCard('{{ deck_card.card.id }}', 'decrease', true)">
+                                      <i class="fas fa-minus-circle"></i>
+                                  </button>
+                                  <span class="mx-3 text-sm font-medium">{{ deck_card.quantity }}</span>
+                                  <button class="text-gray-600 hover:text-green-600 focus:outline-none" onclick="updateDecklistCard('{{ deck_card.card.id }}', 'increase', true)">
+                                      <i class="fas fa-plus-circle"></i>
+                                  </button>
+                              </div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="text-sm text-gray-500">{{ deck_card.card.mana_cost|default:"-" }}</div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="text-sm text-gray-500">{{ deck_card.card.type_line|default:"Unknown" }}</div>
+                          </td>
+                          <td class="px-6 py-4 whitespace-nowrap">
+                              {% with collection_quantity=deck_card.card.collectioncard_set.filter.first.quantity|default:0 %}
+                              <div class="text-sm {% if collection_quantity < deck_card.quantity and collection_quantity != -1 %}text-red-600{% elif collection_quantity == -1 %}text-green-600{% else %}text-gray-500{% endif %}">
+                                  {% if collection_quantity == -1 %}
+                                  ∞
+                                  {% else %}
+                                  {{ collection_quantity }}
+                                  {% endif %}
+                              </div>
+                              {% endwith %}
+                          </td>
+                      </tr>
+                      {% endfor %}
+                  </tbody>
+              </table>
+          </div>
+          {% else %}
+          <div class="text-center py-12 text-gray-500">
+              <p class="text-lg mb-2">No cards in sideboard yet.</p>
+              <p>Search for cards to add them to your sideboard!</p>
+          </div>
+          {% endif %}
+      </div>
+  </div>
+</div>

@@ -1,0 +1,411 @@
+{% comment %}Import Decklist Modal Template{% endcomment %}
+<div id="import-decklist-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
+  <div class="bg-white rounded-lg shadow-xl max-w-2xl w-full mx-4">
+      <div class="flex justify-between items-center border-b px-6 py-4">
+          <h3 class="text-xl font-bold text-gray-800">Import Cards to Decklist</h3>
+          <button type="button" onclick="document.getElementById('import-decklist-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+              <i class="fas fa-times"></i>
+          </button>
+      </div>
+      
+      <div class="p-6">
+          <form id="import-form" enctype="multipart/form-data">
+              {% csrf_token %}
+              
+              <div class="mb-4">
+                  <div class="flex justify-between mb-2">
+                      <label class="block text-gray-700 font-medium">Import Method</label>
+                  </div>
+                  
+                  <div class="flex border rounded-md overflow-hidden">
+                      <button type="button" id="paste-tab-btn" class="flex-1 py-2 px-4 text-center bg-blue-100 text-blue-800 font-medium">
+                          <i class="fas fa-paste mr-1"></i> Paste Text
+                      </button>
+                      <button type="button" id="upload-tab-btn" class="flex-1 py-2 px-4 text-center text-gray-700">
+                          <i class="fas fa-file-upload mr-1"></i> Upload File
+                      </button>
+                      <button type="button" id="archidekt-tab-btn" class="flex-1 py-2 px-4 text-center text-gray-700">
+                          <i class="fas fa-globe mr-1"></i> Archidekt
+                      </button>
+                  </div>
+              </div>
+              
+              <!-- Paste Text Tab -->
+              <div id="paste-tab-content" class="tab-content mb-4">
+                  <p class="text-sm text-gray-600 mb-2">
+                      Paste a list of cards, with each line in the format: <span class="font-mono bg-gray-100 p-1 rounded">Quantity Card Name</span>
+                  </p>
+                  <p class="text-sm text-gray-600 mb-2">
+                      Use <span class="font-mono bg-gray-100 p-1 rounded">MAINBOARD</span> and <span class="font-mono bg-gray-100 p-1 rounded">SIDEBOARD</span> sections to separate card lists.
+                  </p>
+                  <textarea id="deck-input" rows="10" class="w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="MAINBOARD&#10;4 Lightning Bolt&#10;3 Wild Growth&#10;&#10;SIDEBOARD&#10;2 Naturalize"></textarea>
+              </div>
+              
+              <!-- Upload File Tab -->
+              <div id="upload-tab-content" class="tab-content mb-4 hidden">
+                  <p class="text-sm text-gray-600 mb-2">
+                      Upload a text or CSV file with each line in the format: <span class="font-mono bg-gray-100 p-1 rounded">Quantity,Card Name</span>
+                  </p>
+                  <p class="text-sm text-gray-600 mb-2">
+                      Use <span class="font-mono bg-gray-100 p-1 rounded">MAINBOARD</span> and <span class="font-mono bg-gray-100 p-1 rounded">SIDEBOARD</span> sections to separate card lists.
+                  </p>
+                  <div class="border-2 border-dashed border-gray-300 rounded-md p-6 text-center">
+                      <input type="file" id="deck-file-input" class="hidden" accept=".txt,.csv">
+                      <label for="deck-file-input" class="cursor-pointer">
+                          <div class="text-blue-600 mb-2">
+                              <i class="fas fa-cloud-upload-alt text-3xl"></i>
+                          </div>
+                          <p class="text-gray-700 mb-1">Click to upload a file</p>
+                          <p class="text-xs text-gray-500">Supports .txt and .csv files</p>
+                      </label>
+                      <div id="file-name-display" class="mt-3 text-gray-700 hidden">
+                          <i class="fas fa-file-alt mr-1"></i> <span id="uploaded-file-name"></span>
+                      </div>
+                  </div>
+              </div>
+              
+              <!-- Archidekt Tab -->
+              <div id="archidekt-tab-content" class="tab-content mb-4 hidden">
+                  <p class="text-sm text-gray-600 mb-2">
+                      Import a deck from Archidekt by entering the deck ID from its URL.
+                  </p>
+                  <div class="mb-4">
+                      <label for="archidekt-id" class="block text-gray-700 text-sm font-medium mb-2">Archidekt Deck ID</label>
+                      <div class="flex">
+                          <span class="inline-flex items-center px-3 rounded-l-md border border-r-0 border-gray-300 bg-gray-50 text-gray-500">
+                              archidekt.com/decks/
+                          </span>
+                          <input type="text" id="archidekt-id" class="flex-1 p-2 border border-gray-300 rounded-r-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="12345">
+                      </div>
+                      <p class="text-xs text-gray-500 mt-1">
+                          Example: For "https://archidekt.com/decks/12345", enter "12345"
+                      </p>
+                  </div>
+              </div>
+              
+              <div class="mb-4">
+                  <div class="flex items-center">
+                      <input type="checkbox" id="clear-existing-checkbox" class="mr-2">
+                      <label for="clear-existing-checkbox" class="text-gray-700">Replace existing cards (clears the current deck before importing)</label>
+                  </div>
+              </div>
+              
+              <div id="import-status" class="mb-4 hidden">
+                  <div class="bg-blue-50 text-blue-700 p-3 rounded-md">
+                      <div class="flex items-center">
+                          <div class="spinner mr-2" role="status">
+                              <i class="fas fa-spinner fa-spin"></i>
+                          </div>
+                          <div>
+                              <p class="font-medium">Processing import...</p>
+                              <p class="text-sm" id="import-progress">0 cards processed</p>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+              
+              <div id="import-results" class="mb-4 hidden">
+                  <div class="rounded-md p-3">
+                      <p class="font-medium" id="result-summary"></p>
+                      <div class="mt-2 text-sm max-h-40 overflow-y-auto" id="result-details"></div>
+                  </div>
+              </div>
+              
+              <div class="flex justify-end gap-3">
+                  <button type="button" onclick="document.getElementById('import-decklist-modal').classList.add('hidden')" class="py-2 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                      Cancel
+                  </button>
+                  <button type="button" id="import-button" class="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">
+                      Import Cards
+                  </button>
+              </div>
+          </form>
+      </div>
+  </div>
+</div>
+
+<script>
+    // Initialize import modal functionality
+    document.addEventListener('DOMContentLoaded', function() {
+        // Tab switching
+        const pasteTabBtn = document.getElementById('paste-tab-btn');
+        const uploadTabBtn = document.getElementById('upload-tab-btn');
+        const archidektTabBtn = document.getElementById('archidekt-tab-btn');
+        const pasteTabContent = document.getElementById('paste-tab-content');
+        const uploadTabContent = document.getElementById('upload-tab-content');
+        const archidektTabContent = document.getElementById('archidekt-tab-content');
+        
+        pasteTabBtn.addEventListener('click', function() {
+            setActiveTab('paste');
+        });
+        
+        uploadTabBtn.addEventListener('click', function() {
+            setActiveTab('upload');
+        });
+        
+        archidektTabBtn.addEventListener('click', function() {
+            setActiveTab('archidekt');
+        });
+        
+        function setActiveTab(tabName) {
+            // Reset all tabs
+            [pasteTabBtn, uploadTabBtn, archidektTabBtn].forEach(btn => {
+                btn.classList.remove('bg-blue-100', 'text-blue-800', 'font-medium');
+                btn.classList.add('text-gray-700');
+            });
+            
+            [pasteTabContent, uploadTabContent, archidektTabContent].forEach(content => {
+                content.classList.add('hidden');
+            });
+            
+            // Set active tab
+            if (tabName === 'paste') {
+                pasteTabBtn.classList.add('bg-blue-100', 'text-blue-800', 'font-medium');
+                pasteTabBtn.classList.remove('text-gray-700');
+                pasteTabContent.classList.remove('hidden');
+            } else if (tabName === 'upload') {
+                uploadTabBtn.classList.add('bg-blue-100', 'text-blue-800', 'font-medium');
+                uploadTabBtn.classList.remove('text-gray-700');
+                uploadTabContent.classList.remove('hidden');
+            } else if (tabName === 'archidekt') {
+                archidektTabBtn.classList.add('bg-blue-100', 'text-blue-800', 'font-medium');
+                archidektTabBtn.classList.remove('text-gray-700');
+                archidektTabContent.classList.remove('hidden');
+            }
+        }
+        
+        // File input handling
+        const cardFileInput = document.getElementById('deck-file-input');
+        const fileNameDisplay = document.getElementById('file-name-display');
+        const uploadedFileName = document.getElementById('uploaded-file-name');
+        
+        if (cardFileInput) {
+            cardFileInput.addEventListener('change', function() {
+                if (this.files && this.files[0]) {
+                    const file = this.files[0];
+                    uploadedFileName.textContent = file.name;
+                    fileNameDisplay.classList.remove('hidden');
+                } else {
+                    fileNameDisplay.classList.add('hidden');
+                }
+            });
+        }
+        
+        // Import button functionality
+        const importButton = document.getElementById('import-button');
+        const importStatus = document.getElementById('import-status');
+        const importResults = document.getElementById('import-results');
+        const resultSummary = document.getElementById('result-summary');
+        const resultDetails = document.getElementById('result-details');
+        const clearExistingCheckbox = document.getElementById('clear-existing-checkbox');
+        
+        if (importButton) {
+            importButton.addEventListener('click', function() {
+                // Determine active tab
+                let importType = '';
+                if (!pasteTabContent.classList.contains('hidden')) {
+                    importType = 'paste';
+                } else if (!uploadTabContent.classList.contains('hidden')) {
+                    importType = 'file';
+                } else if (!archidektTabContent.classList.contains('hidden')) {
+                    importType = 'archidekt';
+                }
+                
+                // Validate input based on import type
+                let isValid = true;
+                
+                if (importType === 'paste') {
+                    const deckInput = document.getElementById('deck-input');
+                    if (!deckInput.value.trim()) {
+                        alert('Please enter some card data.');
+                        isValid = false;
+                    }
+                } else if (importType === 'file') {
+                    const deckFile = document.getElementById('deck-file-input').files[0];
+                    if (!deckFile) {
+                        alert('Please select a file to upload.');
+                        isValid = false;
+                    }
+                } else if (importType === 'archidekt') {
+                    const archidektId = document.getElementById('archidekt-id').value.trim();
+                    if (!archidektId) {
+                        alert('Please enter an Archidekt deck ID.');
+                        isValid = false;
+                    }
+                }
+                
+                if (!isValid) return;
+                
+                // Show import status
+                importStatus.classList.remove('hidden');
+                importResults.classList.add('hidden');
+                
+                // Disable import button during processing
+                importButton.disabled = true;
+                importButton.classList.add('opacity-50', 'cursor-not-allowed');
+                
+                // Prepare form data
+                const formData = new FormData();
+                formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+                formData.append('import_type', importType);
+                formData.append('clear_existing', clearExistingCheckbox.checked);
+                
+                if (importType === 'paste') {
+                    formData.append('deck_input', document.getElementById('deck-input').value);
+                } else if (importType === 'file') {
+                    formData.append('deck_file', document.getElementById('deck-file-input').files[0]);
+                } else if (importType === 'archidekt') {
+                    formData.append('archidekt_id', document.getElementById('archidekt-id').value.trim());
+                }
+                
+                // Send data to server
+                fetch('{% url "import_decklist" collection.id decklist.id %}', {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    // Hide status and show results
+                    importStatus.classList.add('hidden');
+                    importResults.classList.remove('hidden');
+                    
+                    // Enable import button
+                    importButton.disabled = false;
+                    importButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                    
+                    if (data.success) {
+                        importResults.classList.add('bg-green-50', 'text-green-700');
+                        importResults.classList.remove('bg-red-50', 'text-red-700');
+                        
+                        resultSummary.textContent = `Successfully imported ${data.added_mainboard_count} mainboard and ${data.added_sideboard_count} sideboard cards. ${data.skipped_count} cards were skipped.`;
+                        
+                        // Generate detailed results
+                        resultDetails.innerHTML = '';
+                        
+                        // Add warning messages if any
+                        if (data.warnings && data.warnings.length > 0) {
+                            const warningsList = document.createElement('ul');
+                            warningsList.className = 'list-disc pl-5 mb-2';
+                            
+                            data.warnings.forEach(warning => {
+                                const li = document.createElement('li');
+                                li.textContent = warning;
+                                warningsList.appendChild(li);
+                            });
+                            
+                            resultDetails.appendChild(warningsList);
+                        }
+                        
+                        // Add mainboard cards if any
+                        if (data.added_mainboard && data.added_mainboard.length > 0) {
+                            const mainboardHeader = document.createElement('p');
+                            mainboardHeader.className = 'font-medium mt-2 mb-1';
+                            mainboardHeader.textContent = 'Added to mainboard:';
+                            resultDetails.appendChild(mainboardHeader);
+                            
+                            const mainboardList = document.createElement('ul');
+                            mainboardList.className = 'list-disc pl-5 text-green-700';
+                            
+                            data.added_mainboard.slice(0, 15).forEach(card => {
+                                const li = document.createElement('li');
+                                li.textContent = `${card.quantity}x ${card.name}`;
+                                mainboardList.appendChild(li);
+                            });
+                            
+                            if (data.added_mainboard.length > 15) {
+                                const li = document.createElement('li');
+                                li.textContent = `... and ${data.added_mainboard.length - 15} more`;
+                                mainboardList.appendChild(li);
+                            }
+                            
+                            resultDetails.appendChild(mainboardList);
+                        }
+                        
+                        // Add sideboard cards if any
+                        if (data.added_sideboard && data.added_sideboard.length > 0) {
+                            const sideboardHeader = document.createElement('p');
+                            sideboardHeader.className = 'font-medium mt-2 mb-1';
+                            sideboardHeader.textContent = 'Added to sideboard:';
+                            resultDetails.appendChild(sideboardHeader);
+                            
+                            const sideboardList = document.createElement('ul');
+                            sideboardList.className = 'list-disc pl-5 text-blue-700';
+                            
+                            data.added_sideboard.slice(0, 15).forEach(card => {
+                                const li = document.createElement('li');
+                                li.textContent = `${card.quantity}x ${card.name}`;
+                                sideboardList.appendChild(li);
+                            });
+                            
+                            if (data.added_sideboard.length > 15) {
+                                const li = document.createElement('li');
+                                li.textContent = `... and ${data.added_sideboard.length - 15} more`;
+                                sideboardList.appendChild(li);
+                            }
+                            
+                            resultDetails.appendChild(sideboardList);
+                        }
+                        
+                        // Add skipped cards if any
+                        if (data.skipped_cards && data.skipped_cards.length > 0) {
+                            const skippedHeader = document.createElement('p');
+                            skippedHeader.className = 'font-medium mt-2 mb-1';
+                            skippedHeader.textContent = 'Skipped cards:';
+                            resultDetails.appendChild(skippedHeader);
+                            
+                            const skippedList = document.createElement('ul');
+                            skippedList.className = 'list-disc pl-5 text-yellow-700';
+                            
+                            data.skipped_cards.slice(0, 15).forEach(card => {
+                                const li = document.createElement('li');
+                                li.textContent = `${card.quantity}x ${card.name} (${card.reason})`;
+                                skippedList.appendChild(li);
+                            });
+                            
+                            if (data.skipped_cards.length > 15) {
+                                const li = document.createElement('li');
+                                li.textContent = `... and ${data.skipped_cards.length - 15} more`;
+                                skippedList.appendChild(li);
+                            }
+                            
+                            resultDetails.appendChild(skippedList);
+                        }
+                        
+                        // Add refresh button at the bottom
+                        const refreshDiv = document.createElement('div');
+                        refreshDiv.className = 'mt-4 text-center';
+                        
+                        const refreshButton = document.createElement('button');
+                        refreshButton.className = 'py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200';
+                        refreshButton.textContent = 'Refresh Decklist';
+                        refreshButton.addEventListener('click', function() {
+                            window.location.reload();
+                        });
+                        
+                        refreshDiv.appendChild(refreshButton);
+                        resultDetails.appendChild(refreshDiv);
+                        
+                    } else {
+                        importResults.classList.add('bg-red-50', 'text-red-700');
+                        importResults.classList.remove('bg-green-50', 'text-green-700');
+                        
+                        resultSummary.textContent = data.error || 'An error occurred during import.';
+                        resultDetails.innerHTML = '';
+                    }
+                })
+                .catch(error => {
+                    console.error('Error during import:', error);
+                    importStatus.classList.add('hidden');
+                    importResults.classList.remove('hidden');
+                    importResults.classList.add('bg-red-50', 'text-red-700');
+                    
+                    resultSummary.textContent = 'An error occurred during import.';
+                    resultDetails.textContent = error.toString();
+                    
+                    importButton.disabled = false;
+                    importButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                });
+            });
+        }
+    });
+</script>

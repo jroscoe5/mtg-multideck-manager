@@ -1,0 +1,38 @@
+{% extends 'base.html' %}
+{% load collection_filters %}
+
+{% block title %}{{ decklist.name }} - MultideckManager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <!-- Decklist Header Section -->
+    {% include 'collection/partials/decklist_header.html' %}
+    
+    <!-- Edit Decklist Modal -->
+    {% include 'collection/partials/edit_decklist_modal.html' %}
+    {% include 'collection/partials/import_decklist_modal.html' %}
+    
+    <!-- Deck Conflict Alert -->
+    {% if deck_stats.conflicts %}
+    {% include 'collection/partials/decklist_conflicts.html' %}
+    {% endif %}
+    
+    <!-- Main Content -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- Deck Stats Sidebar -->
+        {% include 'collection/partials/decklist_stats.html' %}
+        
+        <!-- Card Lists -->
+        {% include 'collection/partials/decklist_cards.html' %}
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+{% include 'collection/partials/delete_decklist_modal.html' %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    {% include 'collection/partials/decklist_detail_js.html' %}
+</script>
+{% endblock %}
