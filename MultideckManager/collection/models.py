@@ -17,6 +17,7 @@ class Card(models.Model):
     toughness = models.CharField(max_length=10, blank=True, null=True)
     loyalty = models.CharField(max_length=10, blank=True, null=True)
     rarity = models.CharField(max_length=20, blank=True, null=True)
+    scryfall_uri = models.URLField(max_length=255, blank=True, null=True)
     
     class Meta:
         unique_together = ['set_code', 'collector_number']

@@ -1,0 +1,107 @@
+{% load collection_filters %}
+<div id="cards-tab" class="bg-white rounded-lg shadow-md p-6">
+  <!-- Search and Stats Row -->
+  <div class="flex flex-wrap gap-4 mb-6">
+      <!-- Search Box -->
+      <div class="flex-grow relative">
+          <div class="relative">
+              <span class="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-gray-500">
+                  <i class="fas fa-search"></i>
+              </span>
+              <input type="text" id="card-search" class="pl-10 w-full p-2 border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Search for cards...">
+          </div>
+          <div id="search-suggestions" class="absolute z-10 mt-1 w-full bg-white border rounded-md shadow-lg max-h-60 overflow-y-auto hidden"></div>
+      </div>
+      
+      <!-- Action Buttons -->
+      <div class="flex gap-2">
+          <button id="import-btn" class="py-2 px-4 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors duration-200">
+              <i class="fas fa-file-import mr-1"></i> Import
+          </button>
+          <button id="export-btn" class="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">
+              <i class="fas fa-file-export mr-1"></i> Export
+          </button>
+      </div>
+  </div>
+  
+  <!-- Stats and Results Row -->
+  <div class="flex flex-wrap gap-6">
+      <!-- Collection Stats Card -->
+      <div class="w-full md:w-3/12 bg-gray-50 rounded-lg shadow p-4">
+          <h3 class="text-lg font-medium text-gray-800 mb-3 flex items-center">
+              <i class="fas fa-chart-pie mr-2 text-blue-500"></i> Collection Stats
+          </h3>
+          
+          <div class="space-y-4">
+              <!-- Card Counts -->
+              <div>
+                  <h4 class="font-medium text-gray-700 mb-2">Card Counts</h4>
+                  <div class="grid grid-cols-2 gap-2">
+                      <div class="bg-white rounded p-2 text-center">
+                          <p class="text-sm text-gray-500">Total Cards</p>
+                          <p class="text-xl font-bold text-gray-800">
+                              {{ collection_stats.total_cards }}
+                              {% if collection_stats.infinite_cards > 0 %}
+                                  <span class="text-sm font-normal text-gray-500">
+                                      (+ {{ collection_stats.infinite_cards }} ∞)
+                                  </span>
+                              {% endif %}
+                          </p>
+                      </div>
+                      <div class="bg-white rounded p-2 text-center">
+                          <p class="text-sm text-gray-500">Unique Cards</p>
+                          <p class="text-xl font-bold text-gray-800">{{ collection_stats.unique_cards }}</p>
+                      </div>
+                  </div>
+              </div>
+              
+              <!-- Card Types -->
+              <div>
+                  <h4 class="font-medium text-gray-700 mb-2">Card Types</h4>
+                  <div class="grid grid-cols-2 gap-1 text-sm">
+                      {% for type, count in collection_stats.type_counts.items %}
+                          <div class="flex justify-between">
+                              <span>{{ type }}</span>
+                              <span class="font-medium">{{ count }}</span>
+                          </div>
+                      {% empty %}
+                          <p class="text-sm text-gray-500 italic col-span-2">No cards yet</p>
+                      {% endfor %}
+                  </div>
+              </div>
+              
+              <!-- Most Collected Card -->
+              <div>
+                  <h4 class="font-medium text-gray-700 mb-2">Most Collected Card</h4>
+                  {% if collection_stats.highest_quantity_card %}
+                      <div class="bg-white rounded p-2">
+                          <p class="font-medium">{{ collection_stats.highest_quantity_card.name }}</p>
+                          <div class="flex justify-between text-sm text-gray-600">
+                              <span>{{ collection_stats.highest_quantity_card.set_code|upper }} #{{ collection_stats.highest_quantity_card.collector_number }}</span>
+                              <span>Quantity: 
+                                  {% if collection_stats.highest_quantity == "∞" %}
+                                      ∞
+                                  {% else %}
+                                      {{ collection_stats.highest_quantity }}
+                                  {% endif %}
+                              </span>
+                          </div>
+                      </div>
+                  {% else %}
+                      <p class="text-sm text-gray-500 italic">No cards yet</p>
+                  {% endif %}
+              </div>
+          </div>
+      </div>
+      
+      <!-- Search Results -->
+      <div class="w-full md:w-8/12 md:flex-grow">
+          <h3 class="text-lg font-medium text-gray-800 mb-3">Search Results</h3>
+          <div id="search-results" class="border rounded-md overflow-hidden">
+              <div class="p-8 text-center text-gray-500">
+                  <p>Search for cards to see results here</p>
+              </div>
+          </div>
+      </div>
+  </div>
+</div>

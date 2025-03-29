@@ -1,0 +1,288 @@
+// Card search and results handling
+document.addEventListener('DOMContentLoaded', function() {
+    const cardSearch = document.getElementById('card-search');
+    const searchResults = document.getElementById('search-results');
+    const searchSuggestions = document.getElementById('search-suggestions');
+    
+    if (!cardSearch || !searchResults || !searchSuggestions) {
+        console.error('One or more required elements not found');
+        return;
+    }
+    
+    let searchTimeout;
+    let currentHighlightedIndex = -1;
+    let suggestionItems = [];
+
+    // Function to update debug indicator
+    function updateDebug(text) {
+        setTimeout(() => {
+          console.log(text);
+        }, 1000);
+    }
+    
+    // Search input handling with debounce
+    cardSearch.addEventListener('input', function() {
+        const query = this.value.trim();
+        currentHighlightedIndex = -1;
+        
+        clearTimeout(searchTimeout);
+        
+        if (query.length < 2) {
+            searchSuggestions.classList.add('hidden');
+            return;
+        }
+        
+        searchTimeout = setTimeout(() => {
+            fetch(`{% url 'search_cards' collection.id %}?query=${encodeURIComponent(query)}`)
+                .then(response => response.json())
+                .then(data => {
+                    updateSuggestions(data.results);
+                    updateSearchResults(data.results);
+                })
+                .catch(error => console.error('Error searching cards:', error));
+        }, 300);
+    });
+    
+    // Using keydown event on the input element
+    cardSearch.addEventListener('keydown', function(e) {
+        // Check if suggestions are visible and we have items
+        if (searchSuggestions.classList.contains('hidden') || suggestionItems.length === 0) {
+            return;
+        }
+        
+        // Update debug info
+        updateDebug(`Key pressed: ${e.key}`);
+        
+        // Handle arrow keys and enter
+        if (e.key === 'ArrowDown') {
+            e.preventDefault(); // Prevent scrolling
+            currentHighlightedIndex = (currentHighlightedIndex + 1) % suggestionItems.length;
+            highlightSuggestion();
+        } 
+        else if (e.key === 'ArrowUp') {
+            e.preventDefault(); // Prevent scrolling
+            currentHighlightedIndex = currentHighlightedIndex <= 0 ? 
+                suggestionItems.length - 1 : currentHighlightedIndex - 1;
+            highlightSuggestion();
+        }
+        else if (e.key === 'Enter') {
+            e.preventDefault();
+            
+            if (currentHighlightedIndex >= 0) {
+                // Select the highlighted suggestion
+                suggestionItems[currentHighlightedIndex].click();
+            }
+            
+            // Always hide suggestions on Enter
+            searchSuggestions.classList.add('hidden');
+            
+            // If there's text, do a search anyway
+            if (this.value.trim().length >= 2) {
+                // Force a search immediately
+                const query = this.value.trim();
+                fetch(`{% url 'search_cards' collection.id %}?query=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        updateSearchResults(data.results);
+                    })
+                    .catch(error => console.error('Error searching cards:', error));
+            }
+        }
+        else if (e.key === 'Escape') {
+            e.preventDefault();
+            searchSuggestions.classList.add('hidden');
+        }
+    });
+    
+    // Make sure keyboard events have focus priority
+    cardSearch.addEventListener('focus', function() {
+        updateDebug('Input focused');
+        if (this.value.trim().length >= 2) {
+            searchSuggestions.classList.remove('hidden');
+        }
+    });
+    
+    // Clear highlighting when unfocused
+    cardSearch.addEventListener('blur', function(e) {
+        // Don't hide suggestions if clicking on a suggestion
+        if (searchSuggestions.contains(e.relatedTarget)) {
+            return;
+        }
+        
+        // Short delay to allow for clicks on suggestions
+        setTimeout(() => {
+            if (!searchSuggestions.contains(document.activeElement)) {
+                searchSuggestions.classList.add('hidden');
+            }
+        }, 150);
+    });
+    
+    // Close suggestions when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!cardSearch.contains(event.target) && !searchSuggestions.contains(event.target)) {
+            searchSuggestions.classList.add('hidden');
+        }
+    });
+    
+    // Helper function to highlight the current suggestion
+    function highlightSuggestion() {
+        updateDebug(`Highlighting index: ${currentHighlightedIndex}`);
+        
+        suggestionItems.forEach((item, index) => {
+            // Apply distinct styling to make highlighting very obvious
+            if (index === currentHighlightedIndex) {
+                item.style.backgroundColor = '#e5edff';
+                item.style.fontWeight = 'bold';
+                item.classList.add('bg-gray-100');
+            } else {
+                item.style.backgroundColor = '';
+                item.style.fontWeight = '';
+                item.classList.remove('bg-gray-100');
+            }
+        });
+        
+        // Make sure the highlighted item is visible
+        if (currentHighlightedIndex >= 0) {
+            const highlighted = suggestionItems[currentHighlightedIndex];
+            highlighted.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        }
+    }
+    
+    // Update the suggestions dropdown
+    function updateSuggestions(results) {
+        searchSuggestions.innerHTML = '';
+        suggestionItems = [];
+        currentHighlightedIndex = -1;
+        
+        if (results.length === 0) {
+            searchSuggestions.classList.add('hidden');
+            return;
+        }
+        
+        // Create suggestion items
+        results.forEach((card, index) => {
+            const div = document.createElement('div');
+            div.className = 'px-4 py-2 hover:bg-gray-100 cursor-pointer';
+            div.textContent = card.name;
+            div.dataset.cardId = card.id;
+            div.dataset.index = index;
+            
+            // Handle suggestion click
+            div.addEventListener('click', function() {
+                cardSearch.value = card.name;
+                searchSuggestions.classList.add('hidden');
+                updateSearchResults([card]);
+            });
+            
+            // Handle suggestion hover
+            div.addEventListener('mouseenter', function() {
+                currentHighlightedIndex = parseInt(this.dataset.index);
+                highlightSuggestion();
+            });
+            
+            searchSuggestions.appendChild(div);
+            suggestionItems.push(div);
+        });
+        
+        searchSuggestions.classList.remove('hidden');
+    }
+    
+    // Update search results table
+    function updateSearchResults(results) {
+        if (results.length === 0) {
+            searchResults.innerHTML = `
+                <div class="p-8 text-center text-gray-500">
+                    <p>No cards found matching your search.</p>
+                </div>
+            `;
+            return;
+        }
+        
+        searchResults.innerHTML = `
+            <table class="min-w-full divide-y divide-gray-200">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Card Name</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Quantity</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Mana Cost</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rarity</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${results.map(card => `
+                        <tr>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <a href="${card.scryfall_uri}" target="_blank" class="text-sm font-medium text-blue-600 hover:text-blue-800">${card.name}</a>
+                            </td>
+
+                            <td class="px-6 py-4 whitespace-nowrap">
+                              <div class="flex items-center">
+                                  <button class="text-gray-600 hover:text-red-600 focus:outline-none" onclick="updateCardQuantity('${card.id}', 'decrease')">
+                                      <i class="fas fa-minus-circle"></i>
+                                  </button>
+                                  <span class="mx-3 text-sm font-medium quantity-display" data-card-id="${card.id}">
+                                      ${card.quantity === -1 ? '∞' : card.quantity}
+                                  </span>
+                                  <button class="text-gray-600 hover:text-green-600 focus:outline-none" onclick="updateCardQuantity('${card.id}', 'increase')">
+                                      <i class="fas fa-plus-circle"></i>
+                                  </button>
+                              </div>
+                          </td>
+                        
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">${card.mana_cost || '-'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">${card.type_line || 'Unknown'}</div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="text-sm text-gray-500">${card.rarity ? card.rarity.charAt(0).toUpperCase() + card.rarity.slice(1) : 'Unknown'}</div>
+                            </td>
+
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
+    }
+    
+    // Setup import/export buttons
+    const importBtn = document.getElementById('import-btn');
+    const exportBtn = document.getElementById('export-btn');
+    
+    if (importBtn) {
+        importBtn.addEventListener('click', function() {
+            alert('Import functionality will be implemented soon.');
+        });
+    }
+    
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            alert('Export functionality will be implemented soon.');
+        });
+    }
+});
+
+// Keep this function in global scope for the onclick handlers
+function updateCardQuantity(cardId, action) {
+    const formData = new FormData();
+    formData.append('card_id', cardId);
+    formData.append('action', action);
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    
+    fetch('{% url "update_card_quantity" collection.id %}', {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            const quantityElement = document.querySelector(`.quantity-display[data-card-id="${cardId}"]`);
+            if (quantityElement) {
+                quantityElement.textContent = data.quantity === -1 ? '∞' : data.quantity;
+            }
+        }
+    })
+    .catch(error => console.error('Error updating quantity:', error));
+}

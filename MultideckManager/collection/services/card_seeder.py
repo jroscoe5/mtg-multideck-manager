@@ -22,7 +22,7 @@ class CardSeeder:
         'Accept': 'application/json'
     }
     
-    def __init__(self, data_type='oracle_cards'):
+    def __init__(self, data_type='default_cards'):
         """
         Initialize the card seeder.
         
@@ -166,6 +166,7 @@ class CardSeeder:
                         'toughness': card_data.get('toughness', ''),
                         'loyalty': card_data.get('loyalty', ''),
                         'rarity': card_data.get('rarity', ''),
+                        'scryfall_uri': card_data.get('scryfall_uri', ''),
                     }
                 )
                 

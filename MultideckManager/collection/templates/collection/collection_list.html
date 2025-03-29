@@ -1,0 +1,112 @@
+{% extends 'base.html' %}
+
+{% block title %}Collections - MultideckManager{% endblock %}
+
+{% block content %}
+<div class="mb-8">
+    <h1 class="text-3xl font-bold mb-4">My Collections</h1>
+
+    <!-- Collections Grid -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+        <!-- Add New Collection Card -->
+        <div class="bg-white rounded-lg shadow-md overflow-hidden border-2 border-dashed border-gray-300 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors duration-200" 
+             style="min-height: 200px;"
+             onclick="document.getElementById('add-collection-modal').classList.remove('hidden')">
+            <div class="text-center p-6">
+                <div class="mx-auto bg-blue-100 text-blue-600 rounded-full w-16 h-16 flex items-center justify-center mb-4">
+                    <i class="fas fa-plus text-2xl"></i>
+                </div>
+                <h3 class="text-lg font-semibold text-gray-700">Add New Collection</h3>
+            </div>
+        </div>
+
+        <!-- Existing Collections -->
+        {% for collection in collections %}
+        <div class="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-200">
+            <div class="p-6">
+                <h3 class="text-xl font-bold text-gray-800 mb-2">{{ collection.name }}</h3>
+                <p class="text-gray-600 mb-4">
+                    {% if collection.description %}
+                        {{ collection.description|truncatechars:100 }}
+                    {% else %}
+                        <span class="text-gray-400 italic">No description</span>
+                    {% endif %}
+                </p>
+                
+                <div class="mt-4 flex justify-between text-sm">
+                    <span class="text-gray-500">
+                        <i class="fas fa-layer-group mr-1"></i> Cards: <span id="card-count-{{ collection.id }}">{{ collection.collectioncard_set.count }}</span>
+                    </span>
+                    <span class="text-gray-500">
+                        <i class="fas fa-list-ul mr-1"></i> Decklists: <span id="deck-count-{{ collection.id }}">{{ collection.decklists.count }}</span>
+                    </span>
+                </div>
+                
+                <div class="mt-6">
+                  <a href="{% url 'collection_detail' collection.id %}" class="block w-full text-center py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">
+                      View Collection
+                  </a>
+              </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12 text-gray-500">
+            <p class="text-lg mb-2">You don't have any collections yet.</p>
+            <p>Click the "Add New Collection" card to get started!</p>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+
+<!-- Add Collection Modal -->
+<div id="add-collection-modal" class="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div class="flex justify-between items-center border-b px-6 py-4">
+            <h3 class="text-xl font-bold text-gray-800">Add New Collection</h3>
+            <button type="button" onclick="document.getElementById('add-collection-modal').classList.add('hidden')" class="text-gray-500 hover:text-gray-700">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        
+        <form method="post" class="p-6">
+            {% csrf_token %}
+            
+            <div class="mb-4">
+                <label for="{{ form.name.id_for_label }}" class="block text-gray-700 font-medium mb-2">Collection Name*</label>
+                {{ form.name }}
+                {% if form.name.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.name.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="mb-6">
+                <label for="{{ form.description.id_for_label }}" class="block text-gray-700 font-medium mb-2">Description</label>
+                {{ form.description }}
+                {% if form.description.errors %}
+                <p class="text-red-600 text-sm mt-1">{{ form.description.errors.0 }}</p>
+                {% endif %}
+            </div>
+            
+            <div class="flex justify-end gap-3">
+                <button type="button" onclick="document.getElementById('add-collection-modal').classList.add('hidden')" class="py-2 px-4 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 transition-colors duration-200">
+                    Cancel
+                </button>
+                <button type="submit" class="py-2 px-4 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors duration-200">
+                    Create Collection
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Show modal if there are form errors
+    {% if form.errors %}
+    document.addEventListener('DOMContentLoaded', function() {
+        document.getElementById('add-collection-modal').classList.remove('hidden');
+    });
+    {% endif %}
+</script>
+{% endblock %}

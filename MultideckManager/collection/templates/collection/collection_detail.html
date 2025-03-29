@@ -1,0 +1,73 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ collection.name }} - MultideckManager{% endblock %}
+{% block content %}
+<div class="mb-8">
+    <!-- Collection Header -->
+    <div class="bg-white rounded-lg shadow-md p-6 mb-6">
+        <div class="flex justify-between items-start">
+            <div>
+                <h1 class="text-3xl font-bold text-gray-800">{{ collection.name }}</h1>
+                <p class="text-gray-600 mt-2">
+                    {% if collection.description %}
+                        {{ collection.description }}
+                    {% else %}
+                        <span class="text-gray-400 italic">No description</span>
+                    {% endif %}
+                </p>
+            </div>
+            
+            <button id="edit-collection-btn" class="py-2 px-4 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors duration-200 flex items-center">
+                <i class="fas fa-edit mr-2"></i> Edit
+            </button>
+        </div>
+    </div>
+    
+    <!-- Edit Collection Modal -->
+    {% include 'collection/partials/edit_collection_modal.html' %}
+    
+    <!-- Tabs Navigation -->
+    <div class="border-b border-gray-200 mb-6">
+        <ul class="flex flex-wrap -mb-px">
+            <li class="mr-2">
+                <a href="?tab=cards" class="inline-block py-4 px-4 text-center border-b-2 {% if active_tab == 'cards' %}border-blue-500 text-blue-600 font-medium{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                    <i class="fas fa-th mr-2"></i> Cards
+                </a>
+            </li>
+            <li class="mr-2">
+                <a href="?tab=decklists" class="inline-block py-4 px-4 text-center border-b-2 {% if active_tab == 'decklists' %}border-blue-500 text-blue-600 font-medium{% else %}border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300{% endif %}">
+                    <i class="fas fa-list mr-2"></i> Decklists
+                </a>
+            </li>
+        </ul>
+    </div>
+    
+    <!-- Tab Content -->
+    {% if active_tab == 'cards' %}
+        {% include 'collection/partials/cards_tab.html' %}
+    {% endif %}
+    
+    {% if active_tab == 'decklists' %}
+        {% include 'collection/partials/decklists_tab.html' %}
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Edit collection button
+document.getElementById('edit-collection-btn').addEventListener('click', function() {
+    document.getElementById('edit-collection-modal').classList.remove('hidden');
+});
+
+// Load appropriate tab-specific JavaScript
+{% if active_tab == 'cards' %}
+    {% include 'collection/partials/cards_tab_js.html' %}
+{% endif %}
+
+{% if active_tab == 'decklists' %}
+    {% include 'collection/partials/decklists_tab_js.html' %}
+{% endif %}
+
+</script>
+{% endblock %}
