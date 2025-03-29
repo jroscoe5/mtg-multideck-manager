@@ -1,5 +1,7 @@
 # mtg-multideck-manager
- Local tool for tracking Magic the Gathering collection and decks
+ Local tool for tracking Magic the Gathering collection and decks. 
+ 
+ *vibe coded with claude*
 
 
 ### Installation and Setup
