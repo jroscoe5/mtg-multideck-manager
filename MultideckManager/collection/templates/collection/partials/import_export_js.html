@@ -1,0 +1,272 @@
+{% comment %}Import/Export JavaScript Template{% endcomment %}
+// Import and export functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Elements
+    const importBtn = document.getElementById('import-btn');
+    const exportBtn = document.getElementById('export-btn');
+    const importModal = document.getElementById('import-collection-modal');
+    const pasteTabBtn = document.getElementById('paste-tab-btn');
+    const uploadTabBtn = document.getElementById('upload-tab-btn');
+    const pasteTabContent = document.getElementById('paste-tab-content');
+    const uploadTabContent = document.getElementById('upload-tab-content');
+    const importButton = document.getElementById('import-button');
+    const cardListInput = document.getElementById('card-list-input');
+    const cardFileInput = document.getElementById('card-file-input');
+    const fileNameDisplay = document.getElementById('file-name-display');
+    const uploadedFileName = document.getElementById('uploaded-file-name');
+    const skipUnknownCheckbox = document.getElementById('skip-unknown-checkbox');
+    const importStatus = document.getElementById('import-status');
+    const importProgress = document.getElementById('import-progress');
+    const importResults = document.getElementById('import-results');
+    const resultSummary = document.getElementById('result-summary');
+    const resultDetails = document.getElementById('result-details');
+    
+    // Tab switching
+    if (pasteTabBtn && uploadTabBtn) {
+        pasteTabBtn.addEventListener('click', function() {
+            pasteTabBtn.classList.add('bg-blue-100', 'text-blue-800', 'font-medium');
+            pasteTabBtn.classList.remove('text-gray-700');
+            uploadTabBtn.classList.remove('bg-blue-100', 'text-blue-800', 'font-medium');
+            uploadTabBtn.classList.add('text-gray-700');
+            
+            pasteTabContent.classList.remove('hidden');
+            uploadTabContent.classList.add('hidden');
+        });
+        
+        uploadTabBtn.addEventListener('click', function() {
+            uploadTabBtn.classList.add('bg-blue-100', 'text-blue-800', 'font-medium');
+            uploadTabBtn.classList.remove('text-gray-700');
+            pasteTabBtn.classList.remove('bg-blue-100', 'text-blue-800', 'font-medium');
+            pasteTabBtn.classList.add('text-gray-700');
+            
+            uploadTabContent.classList.remove('hidden');
+            pasteTabContent.classList.add('hidden');
+        });
+    }
+    
+    // File input handling
+    if (cardFileInput) {
+        cardFileInput.addEventListener('change', function() {
+            if (this.files && this.files[0]) {
+                const file = this.files[0];
+                uploadedFileName.textContent = file.name;
+                fileNameDisplay.classList.remove('hidden');
+            } else {
+                fileNameDisplay.classList.add('hidden');
+            }
+        });
+    }
+    
+    // Import button
+    if (importBtn) {
+        importBtn.addEventListener('click', function() {
+            // Reset form state
+            if (cardListInput) cardListInput.value = '';
+            if (cardFileInput) cardFileInput.value = '';
+            if (fileNameDisplay) fileNameDisplay.classList.add('hidden');
+            if (skipUnknownCheckbox) skipUnknownCheckbox.checked = false;
+            if (importStatus) importStatus.classList.add('hidden');
+            if (importResults) importResults.classList.add('hidden');
+            
+            // Switch to paste tab as default
+            if (pasteTabBtn) pasteTabBtn.click();
+            
+            // Show import modal
+            importModal.classList.remove('hidden');
+        });
+    }
+    
+    // Import logic
+    if (importButton) {
+        importButton.addEventListener('click', function() {
+            // Determine which tab is active
+            const isPasteTab = !pasteTabContent.classList.contains('hidden');
+            let cardInput = '';
+            let file = null;
+            
+            if (isPasteTab) {
+                cardInput = cardListInput.value.trim();
+                if (!cardInput) {
+                    alert('Please enter some card data.');
+                    return;
+                }
+            } else {
+                file = cardFileInput.files[0];
+                if (!file) {
+                    alert('Please select a file to upload.');
+                    return;
+                }
+            }
+            
+            // Show import status
+            importStatus.classList.remove('hidden');
+            importResults.classList.add('hidden');
+            importProgress.textContent = '0 cards processed';
+            
+            // Disable import button during processing
+            importButton.disabled = true;
+            importButton.classList.add('opacity-50', 'cursor-not-allowed');
+            
+            // Prepare form data
+            const formData = new FormData();
+            formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+            formData.append('skip_unknown', skipUnknownCheckbox.checked);
+            
+            if (isPasteTab) {
+                formData.append('card_input', cardInput);
+                formData.append('import_type', 'paste');
+            } else {
+                formData.append('card_file', file);
+                formData.append('import_type', 'file');
+            }
+            
+            // Send data to server
+            fetch('{% url "import_cards" collection.id %}', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Hide status and show results
+                importStatus.classList.add('hidden');
+                importResults.classList.remove('hidden');
+                
+                // Enable import button
+                importButton.disabled = false;
+                importButton.classList.remove('opacity-50', 'cursor-not-allowed');
+                
+                if (data.success) {
+                    importResults.classList.add('bg-green-50', 'text-green-700');
+                    importResults.classList.remove('bg-red-50', 'text-red-700');
+                    
+                    resultSummary.textContent = `Successfully imported ${data.added_count} cards. ${data.skipped_count} cards were skipped.`;
+                    
+                    // Generate detailed results
+                    resultDetails.innerHTML = '';
+                    
+                    // Add warning messages if any
+                    if (data.warnings.length > 0) {
+                        const warningsList = document.createElement('ul');
+                        warningsList.className = 'list-disc pl-5 mb-2';
+                        
+                        data.warnings.forEach(warning => {
+                            const li = document.createElement('li');
+                            li.textContent = warning;
+                            warningsList.appendChild(li);
+                        });
+                        
+                        resultDetails.appendChild(warningsList);
+                    }
+                    
+                    // Add successful imports if any
+                    if (data.added_cards.length > 0) {
+                        const successHeader = document.createElement('p');
+                        successHeader.className = 'font-medium mt-2 mb-1';
+                        successHeader.textContent = 'Added cards:';
+                        resultDetails.appendChild(successHeader);
+                        
+                        const successList = document.createElement('ul');
+                        successList.className = 'list-disc pl-5 text-green-700';
+                        
+                        data.added_cards.slice(0, 20).forEach(card => {
+                            const li = document.createElement('li');
+                            li.textContent = `${card.quantity}x ${card.name}`;
+                            successList.appendChild(li);
+                        });
+                        
+                        if (data.added_cards.length > 20) {
+                            const li = document.createElement('li');
+                            li.textContent = `... and ${data.added_cards.length - 20} more`;
+                            successList.appendChild(li);
+                        }
+                        
+                        resultDetails.appendChild(successList);
+                    }
+                    
+                    // Add skipped cards if any
+                    if (data.skipped_cards.length > 0) {
+                        const skippedHeader = document.createElement('p');
+                        skippedHeader.className = 'font-medium mt-2 mb-1';
+                        skippedHeader.textContent = 'Skipped cards:';
+                        resultDetails.appendChild(skippedHeader);
+                        
+                        const skippedList = document.createElement('ul');
+                        skippedList.className = 'list-disc pl-5 text-yellow-700';
+                        
+                        data.skipped_cards.slice(0, 20).forEach(card => {
+                            const li = document.createElement('li');
+                            li.textContent = `${card.quantity}x ${card.name} (${card.reason})`;
+                            skippedList.appendChild(li);
+                        });
+                        
+                        if (data.skipped_cards.length > 20) {
+                            const li = document.createElement('li');
+                            li.textContent = `... and ${data.skipped_cards.length - 20} more`;
+                            skippedList.appendChild(li);
+                        }
+                        
+                        resultDetails.appendChild(skippedList);
+                    }
+                } else {
+                    importResults.classList.add('bg-red-50', 'text-red-700');
+                    importResults.classList.remove('bg-green-50', 'text-green-700');
+                    
+                    resultSummary.textContent = data.error || 'An error occurred during import.';
+                    resultDetails.innerHTML = '';
+                }
+            })
+            .catch(error => {
+                console.error('Error during import:', error);
+                importStatus.classList.add('hidden');
+                importResults.classList.remove('hidden');
+                importResults.classList.add('bg-red-50', 'text-red-700');
+                
+                resultSummary.textContent = 'An error occurred during import.';
+                resultDetails.textContent = error.toString();
+                
+                importButton.disabled = false;
+                importButton.classList.remove('opacity-50', 'cursor-not-allowed');
+            });
+        });
+    }
+    
+    // Export functionality
+    if (exportBtn) {
+        exportBtn.addEventListener('click', function() {
+            // Show loading state
+            const originalText = exportBtn.innerHTML;
+            exportBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Exporting...';
+            exportBtn.disabled = true;
+            
+            fetch(`{% url "export_cards" collection.id %}`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Export failed');
+                    }
+                    return response.blob();
+                })
+                .then(blob => {
+                    // Create download link
+                    const url = window.URL.createObjectURL(blob);
+                    const a = document.createElement('a');
+                    a.style.display = 'none';
+                    a.href = url;
+                    a.download = `{{ collection.name }}_cards_${new Date().toISOString().split('T')[0]}.csv`;
+                    document.body.appendChild(a);
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    
+                    // Reset button
+                    exportBtn.innerHTML = originalText;
+                    exportBtn.disabled = false;
+                })
+                .catch(error => {
+                    console.error('Error exporting collection:', error);
+                    alert('An error occurred during export. Please try again.');
+                    
+                    exportBtn.innerHTML = originalText;
+                    exportBtn.disabled = false;
+                });
+        });
+    }
+});

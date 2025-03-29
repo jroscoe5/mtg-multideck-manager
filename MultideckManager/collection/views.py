@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
-from django.http import JsonResponse
+from django.http import JsonResponse, HttpResponse
 from django.views import View
-from django.views.generic import ListView, DetailView, CreateView, UpdateView, DeleteView
+from django.views.generic import ListView, DetailView
 from django.urls import reverse_lazy
+from django.db import transaction
 from django.db.models import Q, Sum
 from .models import Collection, Decklist, Card, CollectionCard, DecklistCard
 from .forms import CollectionForm, CollectionEditForm
-
+from .services.import_export import ImportExport
 
 class CollectionListView(ListView):
     """View for listing and creating collections."""
@@ -75,7 +76,7 @@ class CollectionDetailView(DetailView):
             infinite_cards = collection_cards.filter(quantity=-1).count()
             
             # Get unique cards count
-            unique_cards = collection_cards.count()
+            unique_cards = collection_cards.filter(quantity__gt=0).count()
             
             # Color distribution
             card_colors = {
@@ -197,6 +198,8 @@ class CollectionDetailView(DetailView):
         context = self.get_context_data(object=self.object)
         context['edit_form'] = form
         return render(request, self.template_name, context)
+    
+
 class CardSearchView(View):
     """API view for searching cards and getting quantities in a collection."""
     def get(self, request, *args, **kwargs):
@@ -268,3 +271,53 @@ class UpdateCardQuantityView(View):
             'success': True,
             'quantity': collection_card.quantity
         })
+        
+
+class ImportCardsView(View):
+    """View for importing cards into a collection."""
+    
+    def post(self, request, *args, **kwargs):
+        collection_id = kwargs.get('collection_id')
+        collection = get_object_or_404(Collection, id=collection_id)
+        
+        import_type = request.POST.get('import_type')
+        skip_unknown = request.POST.get('skip_unknown') == 'true'
+        
+        # Process the input based on import type
+        try:
+            if import_type == 'paste':
+                card_input = request.POST.get('card_input', '')
+                cards_to_import = ImportExport.parse_text_input(card_input)
+            else:  # file import
+                if 'card_file' not in request.FILES:
+                    return JsonResponse({
+                        'success': False,
+                        'error': 'No file was uploaded.'
+                    })
+                
+                card_file = request.FILES['card_file']
+                if card_file.name.endswith('.csv'):
+                    cards_to_import = ImportExport.parse_csv_file(card_file)
+                else:
+                    # Assume it's a plain text file
+                    cards_to_import = ImportExport.parse_text_input(card_file.read().decode('utf-8'))
+            
+            # Process the cards
+            result = ImportExport.process_card_import(collection, cards_to_import, skip_unknown)
+            return JsonResponse(result)
+            
+        except Exception as e:
+            return JsonResponse({
+                'success': False,
+                'error': str(e)
+            })
+
+
+class ExportCardsView(View):
+    """View for exporting cards from a collection."""
+    
+    def get(self, request, *args, **kwargs):
+        collection_id = kwargs.get('collection_id')
+        collection = get_object_or_404(Collection, id=collection_id)
+        
+        return ImportExport.export_collection_to_csv(collection)

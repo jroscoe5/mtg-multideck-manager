@@ -3,6 +3,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const cardSearch = document.getElementById('card-search');
     const searchResults = document.getElementById('search-results');
     const searchSuggestions = document.getElementById('search-suggestions');
+    const importBtn = document.getElementById('import-btn');
+    const exportBtn = document.getElementById('export-btn');
     
     if (!cardSearch || !searchResults || !searchSuggestions) {
         console.error('One or more required elements not found');
@@ -245,22 +247,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 </tbody>
             </table>
         `;
-    }
-    
-    // Setup import/export buttons
-    const importBtn = document.getElementById('import-btn');
-    const exportBtn = document.getElementById('export-btn');
-    
-    if (importBtn) {
-        importBtn.addEventListener('click', function() {
-            alert('Import functionality will be implemented soon.');
-        });
-    }
-    
-    if (exportBtn) {
-        exportBtn.addEventListener('click', function() {
-            alert('Export functionality will be implemented soon.');
-        });
     }
 });
 

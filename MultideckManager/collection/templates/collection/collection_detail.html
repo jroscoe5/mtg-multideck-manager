@@ -25,6 +25,7 @@
     
     <!-- Edit Collection Modal -->
     {% include 'collection/partials/edit_collection_modal.html' %}
+    {% include 'collection/partials/import_collection_modal.html' %}
     
     <!-- Tabs Navigation -->
     <div class="border-b border-gray-200 mb-6">
@@ -63,6 +64,9 @@ document.getElementById('edit-collection-btn').addEventListener('click', functio
 // Load appropriate tab-specific JavaScript
 {% if active_tab == 'cards' %}
     {% include 'collection/partials/cards_tab_js.html' %}
+    {% include 'collection/partials/import_export_js.html' %}
+
+    {}
 {% endif %}
 
 {% if active_tab == 'decklists' %}
