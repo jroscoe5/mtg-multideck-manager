@@ -1,7 +1,6 @@
 from django.db import models
 from django.core.validators import MinValueValidator
 
-
 class Card(models.Model):
     """
     Represents a unique Magic: The Gathering card in the collection.
@@ -70,6 +69,11 @@ class Decklist(models.Model):
     
     def __str__(self):
         return self.name
+    
+    def total_cards(self):
+        """Returns the total number of cards (sum of quantities) in this decklist"""
+        result = self.decklistcard_set.aggregate(total=models.Sum('quantity'))
+        return result['total'] or 0
     
     def can_be_built(self):
         """
