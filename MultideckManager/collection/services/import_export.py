@@ -38,8 +38,15 @@ class ImportExport:
             name_quantity_match = re.match(r'^(.+)\s+\((\d+)\)$', line)
             # Format 3: "Lightning Bolt"
             name_only_match = re.match(r'^([^0-9]+)$', line)
+            # Format 4: "4 Candy Trail (WOE) 243"
+            quantity_name_set_number_match = re.match(r'^(\d+)\s+(.+)\s+\(([A-Z0-9]+)\)\s+([A-Za-z0-9\-]+)$', line)
             
-            if quantity_name_match:
+            card_data = None
+            if quantity_name_set_number_match:
+                quantity = int(quantity_name_set_number_match.group(1))
+                name = quantity_name_set_number_match.group(2).strip()
+                cards_to_import.append({'name': name, 'quantity': quantity})
+            elif quantity_name_match:
                 quantity = int(quantity_name_match.group(1))
                 name = quantity_name_match.group(2).strip()
                 cards_to_import.append({'name': name, 'quantity': quantity})

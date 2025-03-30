@@ -75,9 +75,19 @@ class DecklistImporter:
             
             if card_data:
                 if current_section == 'mainboard':
-                    mainboard.append(card_data)
+                    # check if card is already in mainboard
+                    existing_card = next((card for card in mainboard if card['name'].lower() == card_data['name'].lower()), None)
+                    if existing_card:
+                        existing_card['quantity'] += card_data['quantity']
+                    else:
+                        mainboard.append(card_data)
                 else:
-                    sideboard.append(card_data)
+                    # check if card is already in sideboard
+                    existing_card = next((card for card in sideboard if card['name'].lower() == card_data['name'].lower()), None)
+                    if existing_card:
+                        existing_card['quantity'] += card_data['quantity']
+                    else:
+                        sideboard.append(card_data)
         
         return {'mainboard': mainboard, 'sideboard': sideboard}
     
