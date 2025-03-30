@@ -22,10 +22,7 @@
             </button>
         </div>
     </div>
-    
-    <!-- Edit Collection Modal -->
-    {% include 'collection/partials/edit_collection_modal.html' %}
-    {% include 'collection/partials/import_collection_modal.html' %}
+
     
     <!-- Tabs Navigation -->
     <div class="border-b border-gray-200 mb-6">
@@ -45,6 +42,7 @@
     
     <!-- Tab Content -->
     {% if active_tab == 'cards' %}
+        <!-- Edit Collection Modal -->
         {% include 'collection/partials/cards_tab.html' %}
     {% endif %}
     

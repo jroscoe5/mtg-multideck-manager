@@ -35,10 +35,12 @@ class DecklistImporter:
                 continue
             
             # Check for section headers
-            if line.upper() == 'MAINBOARD' or line.upper() == 'MAIN':
+            # temporarily remove special characters
+            cleaned = re.sub(r'[^\w\s]', '', line)
+            if cleaned.upper() == 'MAINBOARD' or cleaned.upper() == 'MAIN':
                 current_section = 'mainboard'
                 continue
-            elif line.upper() == 'SIDEBOARD' or line.upper() == 'SIDE':
+            elif cleaned.upper() == 'SIDEBOARD' or cleaned.upper() == 'SIDE':
                 current_section = 'sideboard'
                 continue
             
@@ -49,10 +51,17 @@ class DecklistImporter:
             name_quantity_match = re.match(r'^(.+)\s+\((\d+)\)$', line)
             # Format 3: "Lightning Bolt"
             name_only_match = re.match(r'^([^0-9]+)$', line)
+            # Format 4: "4 Candy Trail (WOE) 243"
+            quantity_name_set_number_match = re.match(r'^(\d+)\s+(.+)\s+\(([A-Z0-9]+)\)\s+([A-Za-z0-9\-]+)$', line)
             
             card_data = None
-            
-            if quantity_name_match:
+            if quantity_name_set_number_match:
+                quantity = int(quantity_name_set_number_match.group(1))
+                name = quantity_name_set_number_match.group(2).strip()
+                set_code = quantity_name_set_number_match.group(3)
+                collector_number = quantity_name_set_number_match.group(4)
+                card_data = {'name': name, 'quantity': quantity}
+            elif quantity_name_match:
                 quantity = int(quantity_name_match.group(1))
                 name = quantity_name_match.group(2).strip()
                 card_data = {'name': name, 'quantity': quantity}
